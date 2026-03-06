@@ -1,7 +1,7 @@
 package com.malgn.config;
 
-import com.malgn.entity.User;
-import com.malgn.repository.UserRepository;
+import com.malgn.user.entity.User;
+import com.malgn.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;

@@ -30,11 +30,6 @@ spring:
     virtual:
       enabled: on
 
-## jwt
-jwt:
-  secret: your-secret-key-change-in-production-min-256-bits-for-security-purposes-please-use-a-long-random-string
-  expiration: 86400000 # 24 hours
-
 ## p6spy
 decorator:
   datasource:

@@ -1,6 +1,6 @@
 package com.malgn.security;
 
-import com.malgn.entity.User;
+import com.malgn.user.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
