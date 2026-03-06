@@ -1,4 +1,4 @@
-package com.malgn.user.controller.rest;
+package com.malgn.user.controller;
 
 import com.malgn.user.bo.UserBO;
 import com.malgn.user.entity.User;

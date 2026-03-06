@@ -3,6 +3,8 @@ package com.malgn.user.bo;
 import com.malgn.user.entity.User;
 import com.malgn.user.repository.UserRepository;
 import com.malgn.security.UserPrincipal;
+import com.malgn.exception.UserNotFoundException;
+import com.malgn.exception.UsernameAlreadyExistsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -24,14 +26,14 @@ public class UserBO implements UserDetailsService {
     // 비즈니스 로직: 관리자 여부 확인 (username으로 DB에서 조회)
     public boolean isAdmin(String username) {
         User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found: " + username));
+            .orElseThrow(() -> new UserNotFoundException("User not found: " + username));
         return user.getRole() == User.Role.ADMIN;
     }
 
     // 비즈니스 로직: 사용자명 일치 확인 (username으로 DB에서 조회)
     public boolean isSameUser(String username1, String username2) {
         User user1 = userRepository.findByUsername(username1)
-            .orElseThrow(() -> new RuntimeException("User not found: " + username1));
+            .orElseThrow(() -> new UserNotFoundException("User not found: " + username1));
         return user1.getUsername().equals(username2);
     }
 
@@ -48,7 +50,7 @@ public class UserBO implements UserDetailsService {
 
         // 사용자 정보 가져오기
         User loggedInUser = userRepository.findByUsername(authentication.getName())
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new UserNotFoundException("User not found"));
         
         return loggedInUser;
     }
@@ -58,7 +60,7 @@ public class UserBO implements UserDetailsService {
     public User signup(String username, String password) {
         // 중복 확인
         if (userRepository.existsByUsername(username)) {
-            throw new RuntimeException("Username already exists");
+            throw new UsernameAlreadyExistsException("Username already exists: " + username);
         }
 
         // Entity 생성
@@ -79,7 +81,7 @@ public class UserBO implements UserDetailsService {
     // 비즈니스 로직: 사용자 조회
     public User findByUsername(String username) {
         return userRepository.findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new UserNotFoundException("User not found: " + username));
     }
 
     // Spring Security UserDetailsService 구현: 인증을 위한 사용자 정보 제공

@@ -1,4 +1,4 @@
-package com.malgn.content.controller.rest;
+package com.malgn.content.controller;
 
 import com.malgn.content.bo.ContentsBO;
 import com.malgn.content.entity.Contents;
