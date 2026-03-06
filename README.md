@@ -206,7 +206,6 @@ GET /api/contents/{id}
 ```
 POST /api/contents
 Content-Type: application/json
-Authorization: Bearer {token}
 
 {
   "title": "제목",
@@ -214,11 +213,12 @@ Authorization: Bearer {token}
 }
 ```
 
+> **참고**: Session 기반 인증이므로 쿠키(세션 ID)가 자동으로 전송됩니다. `createdBy`는 서버에서 현재 로그인한 사용자명으로 자동 설정됩니다.
+
 #### 콘텐츠 수정
 ```
 PUT /api/contents/{id}
 Content-Type: application/json
-Authorization: Bearer {token}
 
 {
   "title": "수정된 제목",
@@ -231,8 +231,9 @@ Authorization: Bearer {token}
 #### 콘텐츠 삭제
 ```
 DELETE /api/contents/{id}
-Authorization: Bearer {token}
 ```
+
+> **참고**: Session 기반 인증이므로 쿠키(세션 ID)가 자동으로 전송됩니다.
 
 ## 권한 규칙
 
@@ -263,31 +264,79 @@ Authorization: Bearer {token}
 
 ## 프로젝트 구조
 
+### 아키텍처
+본 프로젝트는 **Controller → BO → Repository → Entity** 4계층 구조로 구성되어 있습니다.
+
+- **Controller**: 요청/응답 처리
+  - `PageController`: HTML 페이지 제공
+  - `RestController`: REST API 엔드포인트 제공
+- **BO (Business Object)**: `@Service`로 비즈니스 로직 처리, Repository 직접 호출
+- **Repository**: 데이터베이스 접근 (Spring Data JPA)
+- **Entity**: `@Data`로 데이터 구조 정의
+
+### 패키지 구조 (Feature별 구성)
+
 ```
 src/main/java/com/malgn/
-├── entity/          # 엔티티 클래스 (Contents, User)
-├── repository/      # JPA Repository 인터페이스
-├── service/         # 비즈니스 로직
-├── controller/      # REST API 컨트롤러
-├── dto/             # 데이터 전송 객체
-├── security/        # Security 관련 클래스 (JWT)
-├── exception/       # 예외 처리 클래스
-├── configure/       # 설정 클래스 (SecurityConfiguration)
-└── config/          # 초기화 클래스 (DataInitializer)
+├── user/                    # 사용자 관련 기능
+│   ├── bo/                  # 비즈니스 로직 (UserBO)
+│   │   └── UserBO.java      # @Service - 로그인, 회원가입, 사용자 조회 등
+│   ├── controller/          # 컨트롤러
+│   │   ├── UserPageController.java    # HTML 페이지 제공
+│   │   └── rest/
+│   │       └── UserRestController.java  # REST API
+│   ├── entity/              # 엔티티
+│   │   └── User.java        # @Data - 사용자 데이터
+│   └── repository/          # Repository
+│       └── UserRepository.java
+│
+├── content/                 # 콘텐츠 관련 기능
+│   ├── bo/                  # 비즈니스 로직 (ContentsBO)
+│   │   └── ContentsBO.java  # @Service - CRUD 비즈니스 로직
+│   ├── controller/          # 컨트롤러
+│   │   ├── ContentPageController.java    # HTML 페이지 제공
+│   │   └── rest/
+│   │       └── ContentRestController.java  # REST API
+│   ├── entity/              # 엔티티
+│   │   └── Contents.java    # @Data - 콘텐츠 데이터
+│   └── repository/          # Repository
+│       └── ContentsRepository.java
+│
+├── config/                  # 설정 클래스
+│   ├── security/            # Security 설정
+│   │   ├── SecurityConfiguration.java
+│   │   ├── H2DbSecurityConfiguration.java
+│   │   └── ActuatorSecurityConfiguration.java
+│   └── DataInitializer.java # 초기 데이터 생성
+│
+├── security/                # Security 관련
+│   └── UserPrincipal.java   # UserDetails 구현체
+│
+└── exception/               # 예외 처리
+    ├── GlobalExceptionHandler.java
+    ├── ResourceNotFoundException.java
+    └── UnauthorizedException.java
 
 src/main/resources/
-├── templates/       # HTML 템플릿 파일
-│   ├── login.html
-│   ├── signup.html
-│   ├── contents.html
-│   ├── content-new.html
-│   ├── content-detail.html
-│   └── content-edit.html
-├── db/sql/         # 데이터베이스 초기화 SQL
-│   ├── h2-schema.sql
-│   └── h2-data.sql
-└── application.yml # 애플리케이션 설정
+├── templates/               # HTML 템플릿 파일
+│   ├── user/
+│   │   ├── login.html
+│   │   └── signup.html
+│   └── content/
+│       ├── contents.html
+│       ├── content-new.html
+│       ├── content-detail.html
+│       └── content-edit.html
+└── application.yml          # 애플리케이션 설정
 ```
+
+### 설계 원칙
+
+1. **Service 레이어 제거**: BO가 비즈니스 로직과 Repository 호출을 모두 담당
+2. **DTO 제거**: Controller에서 Entity를 직접 받아 사용
+3. **Feature별 패키지 구조**: user, content 등 기능별로 모든 레이어를 묶어 관리
+4. **BO는 @Service**: 비즈니스 로직 처리 및 Repository 직접 호출
+5. **Entity는 @Data**: 데이터 구조만 정의
 
 ## 사용한 도구 및 참고 자료
 
@@ -299,10 +348,18 @@ src/main/resources/
 ## 주요 구현 기능
 
 ### 백엔드
+- ✅ **아키텍처: Controller → BO → Repository → Entity 4계층 구조**
+  - Service 레이어 제거, BO로 통합
+  - Feature별 패키지 구조 (user, content)
+  - DTO 제거, Entity 직접 사용
 - ✅ **Session 기반 인증 시스템**
   - Spring Security 기본 세션 인증
   - 쿠키 기반 세션 관리
   - 세션에 사용자 인증 정보 저장
+- ✅ **BO(Business Object) 패턴**
+  - `@Service`로 비즈니스 로직 처리
+  - Repository 직접 호출
+  - 비즈니스 로직과 데이터 접근 통합
 - ✅ **전역 예외 처리** (`GlobalExceptionHandler`)
 - ✅ **페이징 처리** (Spring Data JPA Page)
 - ✅ **조회수 자동 증가** 기능 (상세 조회 시)
@@ -326,15 +383,46 @@ src/main/resources/
 
 ## 주요 변경 사항
 
+### 2026-03-06 업데이트 (아키텍처 리팩토링)
+1. **Service 레이어 제거**
+   - Service 레이어를 완전히 제거하고 BO(Business Object)로 통합
+   - Controller → BO → Repository → Entity 4계층 구조로 단순화
+
+2. **BO(Business Object) 도입**
+   - `@Service` 어노테이션으로 비즈니스 로직 처리
+   - Repository를 직접 주입받아 DB 접근
+   - 비즈니스 로직과 데이터 접근을 하나의 레이어에서 처리
+
+3. **DTO 제거**
+   - DTO를 제거하고 Entity를 직접 사용
+   - Controller에서 Entity를 직접 받아 BO에 전달
+   - 코드 중복 감소 및 구조 단순화
+
+4. **Feature별 패키지 구조**
+   - 기능별로 패키지 분리 (user, content)
+   - 각 feature 내에 bo, controller, entity, repository 포함
+   - 유지보수성 및 확장성 향상
+
+5. **Controller 분리**
+   - `PageController`: HTML 페이지 제공
+   - `RestController`: REST API 엔드포인트 제공
+   - 역할에 따른 명확한 분리
+
+6. **AuthBO 통합**
+   - `AuthBO`를 `UserBO`로 통합
+   - 사용자 관련 모든 비즈니스 로직을 `UserBO`에서 처리
+   - `UserDetailsService` 구현도 `UserBO`에서 처리
+
 ### 2026-03-05 업데이트
-1. **데이터베이스 설정 변경**
+1. **인증 방식 변경: JWT → Session 기반**
+   - JWT 토큰 방식에서 Session 기반 인증으로 변경
+   - Spring Security 기본 세션 인증 활용
+   - 쿠키 기반 세션 관리 (브라우저 자동 처리)
+
+2. **데이터베이스 설정 변경**
    - 인메모리 → 파일 기반 H2 데이터베이스
    - `ddl-auto: create-drop` → `update`
    - 데이터 영구 저장 지원
-
-2. **JWT 토큰 개선**
-   - 토큰에 `role` 정보 추가
-   - 프론트엔드에서 권한 확인 가능
 
 3. **관리자 권한 강화**
    - ADMIN은 모든 게시글 수정/삭제 가능
@@ -354,10 +442,11 @@ src/main/resources/
    - 네비게이션 바 브랜드 이름 변경 (맑은기술)
 
 7. **권한 체크 개선**
-   - 프론트엔드에서 JWT 토큰 디코딩하여 권한 확인
+   - 프론트엔드에서 세션 기반 인증 상태 확인
    - 작성자 또는 ADMIN만 Edit/Delete 버튼 표시
 
 8. **로그인/로그아웃 기능**
-   - 로그인 토큰 저장 문제 해결
-   - 로그아웃 기능 추가
+   - Session 기반 인증으로 변경
+   - 로그아웃 기능 추가 (`/api/auth/logout`)
+   - 현재 사용자 정보 조회 API 추가 (`/api/auth/me`)
    - 로그인 상태에 따른 네비게이션 바 자동 업데이트
