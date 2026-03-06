@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Content - CMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+            min-height: 100vh;
+        }
+        .form-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #1f6feb;
+            box-shadow: 0 0 0 0.2rem rgba(31, 111, 235, 0.25);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-secondary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/api/contents">
+                <i class="bi bi-journal-text me-2"></i>맑은기술
+            </a>
+            <a href="/api/contents" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Back to list
+            </a>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card form-card border-secondary">
+                    <div class="card-header bg-dark border-secondary">
+                        <h4 class="mb-0">
+                            <i class="bi bi-pencil-square me-2"></i>Edit content
+                        </h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <div id="loading" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        
+                        <form id="contentForm" style="display: none;">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">
+                                    <i class="bi bi-type me-1"></i>Title <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control bg-dark border-secondary text-light" 
+                                       id="title" placeholder="Enter content title" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="description" class="form-label">
+                                    <i class="bi bi-text-paragraph me-1"></i>Description
+                                </label>
+                                <textarea class="form-control bg-dark border-secondary text-light" 
+                                          id="description" rows="10" placeholder="Enter content description"></textarea>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-circle me-2"></i>Update content
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="window.location.href='/api/contents'">
+                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <div id="result" class="alert d-none mt-3" role="alert"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE_URL = 'http://localhost:8080/api';
+        let contentId = null;
+
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('로그인이 필요합니다.');
+                window.location.href = '/api/auth/login';
+                return false;
+            }
+            return true;
+        }
+
+        function getContentIdFromUrl() {
+            const path = window.location.pathname;
+            const match = path.match(/\/api\/contents\/(\d+)\/edit/);
+            return match ? match[1] : null;
+        }
+
+        async function loadContent() {
+            if (!checkAuth()) return;
+
+            contentId = getContentIdFromUrl();
+            if (!contentId) {
+                document.getElementById('result').className = 'alert alert-danger';
+                document.getElementById('result').innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>콘텐츠 ID가 없습니다.';
+                document.getElementById('result').classList.remove('d-none');
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            const loadingDiv = document.getElementById('loading');
+            const contentForm = document.getElementById('contentForm');
+            const resultDiv = document.getElementById('result');
+
+            try {
+                loadingDiv.style.display = 'block';
+                contentForm.style.display = 'none';
+
+                const response = await fetch(`${API_BASE_URL}/contents/${contentId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/api/auth/login';
+                    return;
+                }
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    loadingDiv.style.display = 'none';
+                    contentForm.style.display = 'block';
+                    resultDiv.classList.add('d-none');
+                    
+                    document.getElementById('title').value = data.title;
+                    document.getElementById('description').value = data.description || '';
+                } else {
+                    loadingDiv.style.display = 'none';
+                    resultDiv.className = 'alert alert-danger';
+                    resultDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>콘텐츠를 불러올 수 없습니다: ' + (data.message || JSON.stringify(data));
+                    resultDiv.classList.remove('d-none');
+                }
+            } catch (error) {
+                loadingDiv.style.display = 'none';
+                resultDiv.className = 'alert alert-danger';
+                resultDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>오류 발생: ' + error.message;
+                resultDiv.classList.remove('d-none');
+            }
+        }
+
+        document.getElementById('contentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!checkAuth()) return;
+
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+            const token = localStorage.getItem('token');
+            const resultDiv = document.getElementById('result');
+            const submitBtn = document.querySelector('button[type="submit"]');
+
+            if (!title.trim()) {
+                resultDiv.className = 'alert alert-warning';
+                resultDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>제목을 입력해주세요.';
+                resultDiv.classList.remove('d-none');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/contents/${contentId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ title, description })
+                });
+
+                if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/api/auth/login';
+                    return;
+                }
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'alert alert-success';
+                    resultDiv.innerHTML = '<i class="bi bi-check-circle me-2"></i>콘텐츠가 성공적으로 수정되었습니다! 상세 페이지로 이동합니다...';
+                    resultDiv.classList.remove('d-none');
+                    setTimeout(() => {
+                        window.location.href = `/api/contents/${contentId}`;
+                    }, 1500);
+                } else {
+                    resultDiv.className = 'alert alert-danger';
+                    resultDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>수정 실패: ' + (data.message || JSON.stringify(data));
+                    resultDiv.classList.remove('d-none');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Update content';
+                }
+            } catch (error) {
+                resultDiv.className = 'alert alert-danger';
+                resultDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>오류 발생: ' + error.message;
+                resultDiv.classList.remove('d-none');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Update content';
+            }
+        });
+
+        window.onload = function() {
+            loadContent();
+        };
+    </script>
+</body>
+</html>

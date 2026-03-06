@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>콘텐츠 상세 - CMS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        h1 {
+            color: #667eea;
+            font-size: 1.8em;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-left: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .content-container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .content-title {
+            font-size: 2em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .content-meta {
+            color: #666;
+            font-size: 0.95em;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .content-description {
+            color: #555;
+            line-height: 1.8;
+            font-size: 1.1em;
+            white-space: pre-wrap;
+            min-height: 200px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .content-actions {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            display: none;
+        }
+        
+        .result.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+            display: block;
+        }
+        
+        #loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 콘텐츠 상세</h1>
+            <div>
+                <a href="/api/contents" class="btn">목록으로</a>
+                <button onclick="editContent()" class="btn">수정</button>
+                <button onclick="deleteContent()" class="btn btn-danger">삭제</button>
+            </div>
+        </div>
+        
+        <div class="content-container">
+            <div id="loading">로딩 중...</div>
+            <div id="contentDetail" style="display: none;">
+                <div class="content-title" id="contentTitle"></div>
+                <div class="content-meta" id="contentMeta"></div>
+                <div class="content-description" id="contentDescription"></div>
+                <div class="content-actions"></div>
+            </div>
+            <div id="result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8080/api';
+        let contentId = null;
+        let contentData = null;
+
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('로그인이 필요합니다.');
+                window.location.href = '/api/auth/login';
+                return false;
+            }
+            return true;
+        }
+
+        function getContentIdFromUrl() {
+            const path = window.location.pathname;
+            const match = path.match(/\/api\/contents\/(\d+)/);
+            return match ? match[1] : null;
+        }
+
+        async function loadContent() {
+            if (!checkAuth()) return;
+
+            contentId = getContentIdFromUrl();
+            if (!contentId) {
+                document.getElementById('result').className = 'result error';
+                document.getElementById('result').textContent = '콘텐츠 ID가 없습니다.';
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            const loadingDiv = document.getElementById('loading');
+            const contentDetailDiv = document.getElementById('contentDetail');
+            const resultDiv = document.getElementById('result');
+
+            try {
+                loadingDiv.style.display = 'block';
+                contentDetailDiv.style.display = 'none';
+
+                const response = await fetch(`${API_BASE_URL}/contents/${contentId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/api/auth/login';
+                    return;
+                }
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    contentData = data;
+                    loadingDiv.style.display = 'none';
+                    contentDetailDiv.style.display = 'block';
+                    resultDiv.style.display = 'none';
+                    
+                    document.getElementById('contentTitle').textContent = data.title;
+                    document.getElementById('contentMeta').innerHTML = `
+                        작성자: <strong>${data.createdBy}</strong> | 
+                        조회수: <strong>${data.viewCount}</strong> | 
+                        생성일: <strong>${new Date(data.createdDate).toLocaleString('ko-KR')}</strong>
+                        ${data.lastModifiedDate ? `| 수정일: <strong>${new Date(data.lastModifiedDate).toLocaleString('ko-KR')}</strong>` : ''}
+                    `;
+                    document.getElementById('contentDescription').textContent = data.description || '(내용 없음)';
+                } else {
+                    loadingDiv.style.display = 'none';
+                    resultDiv.className = 'result error';
+                    resultDiv.style.display = 'block';
+                    resultDiv.textContent = '콘텐츠를 불러올 수 없습니다: ' + (data.message || JSON.stringify(data));
+                }
+            } catch (error) {
+                loadingDiv.style.display = 'none';
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = '오류 발생: ' + error.message;
+            }
+        }
+
+        function editContent() {
+            if (contentId) {
+                window.location.href = `/api/contents/${contentId}/edit`;
+            }
+        }
+
+        async function deleteContent() {
+            if (!contentId) return;
+            
+            if (!confirm('정말로 이 콘텐츠를 삭제하시겠습니까?')) {
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`${API_BASE_URL}/contents/${contentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    alert('콘텐츠가 삭제되었습니다.');
+                    window.location.href = '/api/contents';
+                } else {
+                    const data = await response.json();
+                    alert('삭제 실패: ' + JSON.stringify(data));
+                }
+            } catch (error) {
+                alert('오류 발생: ' + error.message);
+            }
+        }
+
+        window.onload = function() {
+            loadContent();
+        };
+    </script>
+</body>
+</html>
