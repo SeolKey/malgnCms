@@ -3,6 +3,7 @@ package com.malgn.content.bo;
 import com.malgn.content.entity.Contents;
 import com.malgn.content.repository.ContentsRepository;
 import com.malgn.user.entity.User;
+import com.malgn.user.repository.UserRepository;
 import com.malgn.exception.ResourceNotFoundException;
 import com.malgn.exception.UnauthorizedException;
 import lombok.Getter;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ContentsBO {
     private final ContentsRepository contentsRepository;
+    private final UserRepository userRepository;
 
     @Getter
     private Contents contents;
@@ -53,7 +55,38 @@ public class ContentsBO {
     }
 
     public String getCreatedBy() {
-        return contents.getCreatedBy();
+        String createdBy = contents.getCreatedBy();
+        if (createdBy == null || createdBy.isEmpty()) {
+            return createdBy;
+        }
+        
+        // created_by 값이 userid인지 확인하고, userid인 경우 username으로 변환
+        try {
+            // 먼저 userid로 조회 시도 (created_by에 userid가 저장된 경우)
+            java.util.Optional<User> userOpt = userRepository.findByUserid(createdBy);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                // userid로 조회 성공 -> username 반환 (없으면 userid 반환)
+                String username = user.getUsername();
+                if (username != null && !username.isEmpty()) {
+                    return username; // username 반환 (예: "admin" -> "관리자")
+                }
+                // username이 없는 경우 userid 반환
+                return createdBy;
+            }
+            
+            // userid로 조회 실패 -> username으로 조회 시도 (created_by에 이미 username이 저장된 경우)
+            userOpt = userRepository.findByUsername(createdBy);
+            if (userOpt.isPresent()) {
+                // 이미 username인 경우 그대로 반환
+                return createdBy;
+            }
+        } catch (Exception e) {
+            // 조회 실패 시 원래 값 반환 (예외 발생 시)
+            // 로그는 필요시 추가 가능
+        }
+        
+        return createdBy; // 변환 실패 시 원래 값 반환
     }
 
     public java.time.LocalDateTime getLastModifiedDate() {
@@ -61,7 +94,27 @@ public class ContentsBO {
     }
 
     public String getLastModifiedBy() {
-        return contents.getLastModifiedBy();
+        String lastModifiedBy = contents.getLastModifiedBy();
+        if (lastModifiedBy == null || lastModifiedBy.isEmpty()) {
+            return lastModifiedBy;
+        }
+        
+        // last_modified_by 값이 userid인지 확인하고, userid인 경우 username으로 변환
+        try {
+            User user = userRepository.findByUserid(lastModifiedBy).orElse(null);
+            if (user != null && user.getUsername() != null && !user.getUsername().isEmpty()) {
+                return user.getUsername(); // username 반환
+            }
+            // userid로 조회 실패 시 username으로 조회 시도
+            user = userRepository.findByUsername(lastModifiedBy).orElse(null);
+            if (user != null) {
+                return lastModifiedBy; // 이미 username인 경우 그대로 반환
+            }
+        } catch (Exception e) {
+            // 조회 실패 시 원래 값 반환
+        }
+        
+        return lastModifiedBy; // 변환 실패 시 원래 값 반환
     }
 
     // 비즈니스 로직: 전체 목록 조회
@@ -69,8 +122,21 @@ public class ContentsBO {
     public Page<ContentsBO> getAllContents(Pageable pageable) {
         return contentsRepository.findAll(pageable)
             .map(entity -> {
-                ContentsBO bo = new ContentsBO(contentsRepository);
+                ContentsBO bo = new ContentsBO(contentsRepository, userRepository);
                 bo.setContents(entity);
+                // created_by가 userid인 경우 username으로 변환하여 저장
+                String createdBy = entity.getCreatedBy();
+                if (createdBy != null && !createdBy.isEmpty()) {
+                    try {
+                        User user = userRepository.findByUserid(createdBy).orElse(null);
+                        if (user != null && user.getUsername() != null && !user.getUsername().isEmpty()) {
+                            // userid로 조회 성공 -> username으로 업데이트 (메모리상에서만)
+                            entity.setCreatedBy(user.getUsername());
+                        }
+                    } catch (Exception e) {
+                        // 변환 실패 시 무시
+                    }
+                }
                 return bo;
             });
     }
@@ -81,13 +147,15 @@ public class ContentsBO {
         Contents content = contentsRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Content not found with id: " + id));
         
-        ContentsBO contentBO = new ContentsBO(contentsRepository);
+        // 조회수만 증가 (lastModifiedDate는 변경되지 않음)
+        contentsRepository.incrementViewCount(id);
+        
+        // 엔티티를 다시 조회하여 업데이트된 조회수 반영
+        content = contentsRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Content not found with id: " + id));
+        
+        ContentsBO contentBO = new ContentsBO(contentsRepository, userRepository);
         contentBO.setContents(content);
-        
-        // 조회수 증가
-        contentBO.incrementViewCount();
-        
-        contentsRepository.save(content);
         
         return contentBO;
     }
@@ -95,9 +163,14 @@ public class ContentsBO {
     // 비즈니스 로직: 콘텐츠 생성
     @Transactional
     public ContentsBO createContent(Contents content) {
+        // viewCount가 null이면 0으로 설정
+        if (content.getViewCount() == null) {
+            content.setViewCount(0L);
+        }
+        
         Contents saved = contentsRepository.save(content);
         
-        ContentsBO contentBO = new ContentsBO(contentsRepository);
+        ContentsBO contentBO = new ContentsBO(contentsRepository, userRepository);
         contentBO.setContents(saved);
         return contentBO;
     }
@@ -108,15 +181,30 @@ public class ContentsBO {
         Contents existingContent = contentsRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Content not found with id: " + id));
 
-        ContentsBO contentBO = new ContentsBO(contentsRepository);
+        ContentsBO contentBO = new ContentsBO(contentsRepository, userRepository);
         contentBO.setContents(existingContent);
         
-        // 권한 확인 및 수정
+        // 권한 확인
         contentBO.validateUpdatePermission(currentUser);
-        contentBO.update(content.getTitle(), content.getDescription(), currentUser.getUsername());
+        
+        // 수정 처리: lastModifiedBy와 lastModifiedDate 명시적으로 설정
+        // @LastModifiedDate를 제거했으므로 수동으로만 설정됨 (조회수 증가 시 자동 업데이트되지 않음)
+        // last_modified_by에는 항상 username(사용자명)만 저장
+        // User.getUsername()은 UserDetails 인터페이스로 인해 userid를 반환하므로,
+        // 실제 사용자명 필드를 가져오기 위해 getActualUsername() 메서드 사용
+        String modifiedBy = currentUser.getActualUsername(); // username 필드 값 반환 (null일 수 있음)
+        existingContent.setTitle(content.getTitle());
+        existingContent.setDescription(content.getDescription());
+        existingContent.setLastModifiedBy(modifiedBy);
+        existingContent.setLastModifiedDate(java.time.LocalDateTime.now());
 
         Contents updated = contentsRepository.save(existingContent);
-        ContentsBO updatedBO = new ContentsBO(contentsRepository);
+        
+        // 저장 후 다시 조회하여 확실히 저장되었는지 확인
+        updated = contentsRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Content not found with id: " + id));
+        
+        ContentsBO updatedBO = new ContentsBO(contentsRepository, userRepository);
         updatedBO.setContents(updated);
         return updatedBO;
     }
@@ -127,7 +215,7 @@ public class ContentsBO {
         Contents content = contentsRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Content not found with id: " + id));
 
-        ContentsBO contentBO = new ContentsBO(contentsRepository);
+        ContentsBO contentBO = new ContentsBO(contentsRepository, userRepository);
         contentBO.setContents(content);
         
         // 권한 확인
@@ -136,7 +224,8 @@ public class ContentsBO {
         contentsRepository.delete(content);
     }
 
-    // 비즈니스 로직: 조회수 증가
+    // 비즈니스 로직: 조회수 증가 (더 이상 사용하지 않음 - Repository의 incrementViewCount 사용)
+    @Deprecated
     public void incrementViewCount() {
         Long currentCount = contents.getViewCount() != null ? contents.getViewCount() : 0L;
         contents.setViewCount(currentCount + 1);
@@ -144,7 +233,11 @@ public class ContentsBO {
 
     // 비즈니스 로직: 권한 확인 (수정 가능 여부)
     public void validateUpdatePermission(User currentUser) {
-        if (!contents.getCreatedBy().equals(currentUser.getUsername())
+        // created_by와 비교 (username 또는 userid 모두 확인)
+        String currentUserIdentifier = currentUser.getUsername() != null && !currentUser.getUsername().isEmpty()
+            ? currentUser.getUsername()
+            : currentUser.getUserid();
+        if (!contents.getCreatedBy().equals(currentUserIdentifier)
             && currentUser.getRole() != User.Role.ADMIN) {
             throw new UnauthorizedException("You don't have permission to update this content");
         }
@@ -152,7 +245,11 @@ public class ContentsBO {
 
     // 비즈니스 로직: 권한 확인 (삭제 가능 여부)
     public void validateDeletePermission(User currentUser) {
-        if (!contents.getCreatedBy().equals(currentUser.getUsername())
+        // created_by와 비교 (username 또는 userid 모두 확인)
+        String currentUserIdentifier = currentUser.getUsername() != null && !currentUser.getUsername().isEmpty()
+            ? currentUser.getUsername()
+            : currentUser.getUserid();
+        if (!contents.getCreatedBy().equals(currentUserIdentifier)
             && currentUser.getRole() != User.Role.ADMIN) {
             throw new UnauthorizedException("You don't have permission to delete this content");
         }

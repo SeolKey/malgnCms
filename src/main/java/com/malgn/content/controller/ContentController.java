@@ -32,6 +32,11 @@ public class ContentController {
         }
     }
 
+    @GetMapping(value = "/", produces = MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<String> homePage() {
+        return serveHtml("contents.html");
+    }
+
     @GetMapping(value = "/api/contents", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> contentsListPage() {
         return serveHtml("contents.html");

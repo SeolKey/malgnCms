@@ -6,6 +6,14 @@
 
 > **참고**: JavaScript에서 `fetch` 사용 시 `credentials: 'include'` 옵션이 필요합니다.
 
+### UserID와 Username
+
+본 프로젝트는 **UserID(로그인 ID)**와 **Username(사용자명)**을 분리하여 관리합니다:
+
+- **UserID (`userid`)**: 로그인 시 사용하는 고유 ID (필수, unique)
+- **Username (`username`)**: 화면에 표시되는 사용자명 (선택사항)
+- 콘텐츠의 `created_by`, `last_modified_by`에는 **Username**만 저장됩니다 (UserID가 아닌 사용자명)
+
 ## 인증 API
 
 ### 회원가입
@@ -18,28 +26,35 @@ POST /api/auth/signup
 Content-Type: application/json
 
 {
-  "username": "testuser",
+  "userid": "testuser",
+  "username": "테스트사용자",
   "password": "password123"
 }
 ```
+
+**요청 본문**
+- `userid` (필수): 로그인 시 사용할 고유 ID (3-50자, unique)
+- `username` (선택): 화면에 표시될 사용자명 (최대 50자)
+- `password` (필수): 비밀번호 (6자 이상)
 
 **응답**
 - **성공 (201 Created)**
 ```json
 {
   "id": 1,
-  "username": "testuser",
+  "userid": "testuser",
+  "username": "테스트사용자",
   "role": "USER"
 }
 ```
 
-- **실패 (409 Conflict)** - 사용자명 중복
+- **실패 (409 Conflict)** - UserID 중복
 ```json
 {
   "timestamp": "2026-03-06T10:30:00",
   "status": 409,
   "error": "Conflict",
-  "message": "Username already exists: testuser",
+  "message": "UserID already exists: testuser",
   "path": "/api/auth/signup"
 }
 ```
@@ -67,17 +82,22 @@ POST /api/auth/login
 Content-Type: application/json
 
 {
-  "username": "admin",
+  "userid": "admin",
   "password": "password"
 }
 ```
+
+**요청 본문**
+- `userid` (필수): 로그인 ID
+- `password` (필수): 비밀번호
 
 **응답**
 - **성공 (200 OK)**
 ```json
 {
   "id": 1,
-  "username": "admin",
+  "userid": "admin",
+  "username": "관리자",
   "role": "ADMIN"
 }
 ```
@@ -108,10 +128,15 @@ GET /api/auth/me
 - **성공 (200 OK)**
 ```json
 {
-  "username": "admin",
+  "userid": "admin",
+  "username": "관리자",
   "role": "ADMIN"
 }
 ```
+
+> **참고**: 
+> - `userid`: 로그인 시 사용하는 고유 ID
+> - `username`: 화면에 표시되는 사용자명 (없으면 userid와 동일)
 
 - **실패 (401 Unauthorized)** - 인증되지 않은 사용자
 ```json
@@ -120,14 +145,17 @@ GET /api/auth/me
 }
 ```
 
-### 사용자명 중복 확인
+### UserID 중복 확인
 
-회원가입 시 사용자명의 중복 여부를 확인합니다.
+회원가입 시 UserID의 중복 여부를 확인합니다.
 
 **요청**
 ```
-GET /api/auth/check-username/{username}
+GET /api/auth/check-userid/{userid}
 ```
+
+**경로 변수**
+- `userid`: 확인할 UserID
 
 **응답**
 - **성공 (200 OK)**
@@ -184,9 +212,9 @@ GET /api/contents?page=0&size=10&sort=createdDate,desc
       "description": "내용",
       "viewCount": 10,
       "createdDate": "2026-03-06T10:00:00",
-      "createdBy": "admin",
+      "createdBy": "관리자",
       "lastModifiedDate": "2026-03-06T11:00:00",
-      "lastModifiedBy": "admin"
+      "lastModifiedBy": "관리자"
     }
   ],
   "pageable": {
@@ -228,9 +256,9 @@ GET /api/contents/{id}
   "description": "내용",
   "viewCount": 11,
   "createdDate": "2026-03-06T10:00:00",
-  "createdBy": "admin",
+  "createdBy": "관리자",
   "lastModifiedDate": "2026-03-06T11:00:00",
-  "lastModifiedBy": "admin"
+  "lastModifiedBy": "관리자"
 }
 ```
 
@@ -265,6 +293,7 @@ Content-Type: application/json
 **요청 본문**
 - `title` (필수): 콘텐츠 제목 (최대 100자)
 - `description` (선택): 콘텐츠 내용
+- `viewCount` (선택): 조회수 (지정하지 않으면 자동으로 0으로 설정됨)
 
 **응답**
 - **성공 (201 Created)**
@@ -275,13 +304,15 @@ Content-Type: application/json
   "description": "내용",
   "viewCount": 0,
   "createdDate": "2026-03-06T10:00:00",
-  "createdBy": "admin",
+  "createdBy": "관리자",
   "lastModifiedDate": null,
   "lastModifiedBy": null
 }
 ```
 
-> **참고**: `createdBy`는 서버에서 현재 로그인한 사용자명으로 자동 설정됩니다.
+> **참고**: 
+> - `createdBy`는 서버에서 현재 로그인한 사용자의 **Username(사용자명)**으로 자동 설정됩니다. UserID가 아닌 Username이 저장됩니다.
+> - `viewCount`를 요청 본문에 포함하지 않으면 자동으로 0으로 설정됩니다.
 
 - **실패 (400 Bad Request)** - Validation 실패
 ```json
@@ -337,13 +368,13 @@ Content-Type: application/json
   "description": "수정된 내용",
   "viewCount": 10,
   "createdDate": "2026-03-06T10:00:00",
-  "createdBy": "admin",
+  "createdBy": "관리자",
   "lastModifiedDate": "2026-03-06T12:00:00",
-  "lastModifiedBy": "admin"
+  "lastModifiedBy": "관리자"
 }
 ```
 
-> **참고**: 수정 시 `lastModifiedBy` 필드에 수정한 사용자명이 자동으로 기록됩니다.
+> **참고**: 수정 시 `lastModifiedBy` 필드에 수정한 사용자의 **Username(사용자명)**이 자동으로 기록됩니다. UserID가 아닌 Username이 저장됩니다.
 
 - **실패 (404 Not Found)** - 콘텐츠를 찾을 수 없음
 ```json

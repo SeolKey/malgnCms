@@ -26,7 +26,7 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public String getUsername() {
-        return user.getUsername();
+        return user.getUserid(); // Spring Security는 userid를 사용
     }
 
     @Override

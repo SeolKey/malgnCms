@@ -40,13 +40,13 @@
                         
                         <form id="loginForm">
                             <div class="mb-3">
-                                <label for="username" class="form-label">Username</label>
+                                <label for="userid" class="form-label">UserID</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-dark border-secondary">
-                                        <i class="bi bi-person"></i>
+                                        <i class="bi bi-person-badge"></i>
                                     </span>
                                     <input type="text" class="form-control bg-dark border-secondary text-light" 
-                                           id="username" value="admin" placeholder="admin 또는 user1" required>
+                                           id="userid" value="admin" placeholder="admin 또는 user1" required>
                                 </div>
                             </div>
                             
@@ -92,7 +92,7 @@
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const username = document.getElementById('username').value;
+            const userid = document.getElementById('userid').value;
             const password = document.getElementById('password').value;
             const resultDiv = document.getElementById('result');
 
@@ -103,15 +103,16 @@
                         'Content-Type': 'application/json'
                     },
                     credentials: 'include', // 쿠키(세션) 포함
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ userid, password })
                 });
 
                 const data = await response.json();
                 
                 if (response.ok) {
                     // 세션이 자동으로 생성됨 (쿠키에 저장)
+                    const displayName = data.username || data.userid || userid;
                     resultDiv.className = 'alert alert-success';
-                    resultDiv.innerHTML = `<i class="bi bi-check-circle me-2"></i>로그인 성공! 환영합니다, ${data.username}님.`;
+                    resultDiv.innerHTML = `<i class="bi bi-check-circle me-2"></i>로그인 성공! 환영합니다, ${displayName}님.`;
                     resultDiv.classList.remove('d-none');
                     setTimeout(() => {
                         window.location.href = '/api/contents';

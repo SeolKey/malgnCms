@@ -32,17 +32,6 @@
             <a class="navbar-brand" href="/api/contents">
                 <i class="bi bi-journal-text me-2"></i>맑은기술
             </a>
-            <div class="d-flex gap-2">
-                <a href="/api/contents" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left me-1"></i>Back to list
-                </a>
-                <button onclick="editContent()" class="btn btn-outline-primary btn-sm">
-                    <i class="bi bi-pencil me-1"></i>Edit
-                </button>
-                <button onclick="deleteContent()" class="btn btn-outline-danger btn-sm">
-                    <i class="bi bi-trash me-1"></i>Delete
-                </button>
-            </div>
         </div>
     </nav>
 
@@ -73,6 +62,19 @@
                             </div>
                             <hr class="border-secondary">
                             <div class="content-body p-4" id="contentDescription"></div>
+                            <div class="card-footer bg-dark border-secondary border-top">
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <a href="/api/contents" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-arrow-left me-1"></i>목록으로
+                                    </a>
+                                    <button onclick="editContent()" class="btn btn-outline-primary btn-sm" id="editBtn" style="display: none;">
+                                        <i class="bi bi-pencil me-1"></i>수정
+                                    </button>
+                                    <button onclick="deleteContent()" class="btn btn-outline-danger btn-sm" id="deleteBtn" style="display: none;">
+                                        <i class="bi bi-trash me-1"></i>삭제
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -112,16 +114,6 @@
             }
         }
 
-        async function checkAuth() {
-            const userInfo = await getCurrentUser();
-            if (!userInfo) {
-                alert('로그인이 필요합니다.');
-                window.location.href = '/api/auth/login';
-                return false;
-            }
-            return true;
-        }
-
         function getContentIdFromUrl() {
             const path = window.location.pathname;
             const match = path.match(/\/api\/contents\/(\d+)/);
@@ -129,8 +121,9 @@
         }
 
         async function loadContent() {
-            if (!(await checkAuth())) return;
-
+            // 사용자 정보 먼저 가져오기
+            await getCurrentUser();
+            
             contentId = getContentIdFromUrl();
             if (!contentId) {
                 document.getElementById('result').className = 'alert alert-danger';
@@ -152,12 +145,12 @@
                     credentials: 'include'
                 });
 
-                if (response.status === 401) {
-                    window.location.href = '/api/auth/login';
-                    return;
-                }
-
                 const data = await response.json();
+                
+                // 디버깅: 수정일 정보 확인
+                console.log('Content Data 전체:', data);
+                console.log('lastModifiedBy:', data.lastModifiedBy, 'lastModifiedDate:', data.lastModifiedDate);
+                console.log('data.contents:', data.contents);
                 
                 if (response.ok) {
                     contentData = data;
@@ -165,26 +158,38 @@
                     contentDetailDiv.style.display = 'block';
                     resultDiv.classList.add('d-none');
                     
-                    document.getElementById('contentTitle').textContent = data.title;
-                    document.getElementById('contentAuthor').textContent = data.createdBy;
-                    document.getElementById('contentViews').textContent = data.viewCount;
-                    document.getElementById('contentDate').textContent = new Date(data.createdDate).toLocaleString('ko-KR');
+                    // ContentsBO의 구조에 따라 접근 경로 확인
+                    // ContentsBO는 Contents 엔티티를 포함하고 getter 메서드가 있으므로
+                    // 최상위 레벨에 필드가 있을 수 있음
+                    const lastModifiedBy = data.lastModifiedBy || (data.contents && data.contents.lastModifiedBy);
+                    const lastModifiedDate = data.lastModifiedDate || (data.contents && data.contents.lastModifiedDate);
+                    
+                    document.getElementById('contentTitle').textContent = data.title || (data.contents && data.contents.title);
+                    document.getElementById('contentAuthor').textContent = data.createdBy || (data.contents && data.contents.createdBy);
+                    document.getElementById('contentViews').textContent = data.viewCount || (data.contents && data.contents.viewCount) || 0;
+                    const createdDate = data.createdDate || (data.contents && data.contents.createdDate);
+                    document.getElementById('contentDate').textContent = new Date(createdDate).toLocaleString('ko-KR');
                     
                     const modifiedSpan = document.getElementById('contentModified');
-                    if (data.lastModifiedDate) {
-                        modifiedSpan.innerHTML = `<span class="mx-2">·</span><i class="bi bi-pencil me-1"></i>Updated ${new Date(data.lastModifiedDate).toLocaleString('ko-KR')}`;
+                    // 수정일은 lastModifiedBy가 있을 때만 표시 (실제로 사용자가 수정한 경우만)
+                    // 조회수 증가 등으로 인한 자동 업데이트는 제외
+                    console.log('수정일 체크:', { lastModifiedBy, lastModifiedDate });
+                    if (lastModifiedBy && lastModifiedDate) {
+                        modifiedSpan.innerHTML = `<span class="mx-2">·</span><i class="bi bi-pencil me-1"></i>Updated ${new Date(lastModifiedDate).toLocaleString('ko-KR')}`;
                     } else {
                         modifiedSpan.innerHTML = '';
                     }
                     
-                    document.getElementById('contentDescription').textContent = data.description || '(내용 없음)';
+                    const description = data.description || (data.contents && data.contents.description);
+                    document.getElementById('contentDescription').textContent = description || '(내용 없음)';
                     
                     // 작성자 본인이거나 ADMIN인지 확인하여 Edit/Delete 버튼 표시
+                    const createdBy = data.createdBy || (data.contents && data.contents.createdBy);
                     const isAdmin = currentRole === 'ADMIN';
-                    const isOwner = currentUsername && currentUsername === data.createdBy;
+                    const isOwner = currentUsername && currentUsername === createdBy;
                     const canEditDelete = isOwner || isAdmin;
-                    const editBtn = document.querySelector('button[onclick="editContent()"]');
-                    const deleteBtn = document.querySelector('button[onclick="deleteContent()"]');
+                    const editBtn = document.getElementById('editBtn');
+                    const deleteBtn = document.getElementById('deleteBtn');
                     
                     if (editBtn) editBtn.style.display = canEditDelete ? 'inline-block' : 'none';
                     if (deleteBtn) deleteBtn.style.display = canEditDelete ? 'inline-block' : 'none';
@@ -203,12 +208,22 @@
         }
 
         function editContent() {
+            if (!currentUsername) {
+                alert('로그인이 필요합니다.');
+                window.location.href = '/api/auth/login';
+                return;
+            }
             if (contentId) {
                 window.location.href = `/api/contents/${contentId}/edit`;
             }
         }
 
         async function deleteContent() {
+            if (!currentUsername) {
+                alert('로그인이 필요합니다.');
+                window.location.href = '/api/auth/login';
+                return;
+            }
             if (!contentId) return;
             
             if (!confirm('정말로 이 콘텐츠를 삭제하시겠습니까?')) {

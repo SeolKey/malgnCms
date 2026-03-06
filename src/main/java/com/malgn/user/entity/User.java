@@ -22,7 +22,10 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false, length = 50)
+    @Column(name = "userid", unique = true, nullable = false, length = 50)
+    private String userid;
+
+    @Column(name = "username", length = 50)
     private String username;
 
     @Column(nullable = false)
@@ -56,6 +59,22 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    @Override
+    public String getUsername() {
+        return userid; // Spring Security는 userid를 사용
+    }
+
+    // 실제 사용자명(username 필드)을 반환하는 메서드
+    // UserDetails의 getUsername()이 userid를 반환하므로, 실제 username 필드를 가져오기 위한 메서드
+    public String getActualUsername() {
+        return username; // username 필드 값 반환 (null일 수 있음)
+    }
+    
+    // 표시용 이름 반환 (username이 있으면 username, 없으면 userid)
+    public String getDisplayName() {
+        return username != null && !username.isEmpty() ? username : userid;
     }
 
     public enum Role {

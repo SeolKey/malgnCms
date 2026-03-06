@@ -3,7 +3,6 @@ package com.malgn.content.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
@@ -41,7 +40,6 @@ public class Contents {
     private String createdBy;
 
     @Column(name = "last_modified_date")
-    @LastModifiedDate
     private LocalDateTime lastModifiedDate;
 
     @Column(name = "last_modified_by", length = 50)

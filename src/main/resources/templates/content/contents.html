@@ -3,89 +3,354 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contents - CMS</title>
+    <title>게시판 - 맑은기술</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
+        * {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+        }
         body {
             background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
             min-height: 100vh;
         }
-        .content-card {
+        .board-container {
             background: #161b22;
             border: 1px solid #30363d;
-            border-radius: 8px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            margin-top: 2rem;
+            transition: all 0.3s ease;
+        }
+        .board-container:hover {
+            box-shadow: 0 12px 32px rgba(31, 111, 235, 0.15);
+        }
+        .board-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #30363d;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .board-header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+        }
+        .board-header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-create {
+            background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+            border: 1px solid #238636;
+            color: #ffffff;
+            font-weight: 500;
             transition: all 0.2s;
         }
-        .content-card:hover {
-            border-color: #1f6feb;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(31, 111, 235, 0.15);
+        .btn-create:hover {
+            background: linear-gradient(135deg, #2ea043 0%, #238636 100%);
+            border-color: #2ea043;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(46, 160, 67, 0.3);
+            color: #ffffff;
         }
-        .content-card .card-body {
-            padding: 1rem;
+        .board-info {
+            font-size: 0.95rem;
+            color: #8b949e;
+            font-weight: 500;
         }
-        .content-card .card-title {
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
+        .search-icon {
+            cursor: pointer;
+            color: #8b949e;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
         }
-        .content-card .card-text {
-            font-size: 0.9rem;
-            margin-bottom: 0.75rem;
-            line-height: 1.4;
-        }
-        .content-card .card-text.text-muted {
-            font-size: 0.8rem;
-            margin-bottom: 0.5rem;
-        }
-        .content-title-link {
+        .search-icon:hover {
             color: #58a6ff;
+            background: rgba(88, 166, 255, 0.1);
+            transform: scale(1.1);
+        }
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .board-table {
+            width: 100%;
+            min-width: 600px;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .board-table thead {
+            background: linear-gradient(135deg, #21262d 0%, #1c2128 100%);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .board-table th {
+            padding: 1rem 0.75rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #c9d1d9;
+            border-bottom: 2px solid #30363d;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .board-table th:first-child {
+            width: 8%;
+            min-width: 60px;
+        }
+        .board-table th:nth-child(2) {
+            width: auto;
+            text-align: left;
+            min-width: 200px;
+        }
+        .board-table th:nth-child(3),
+        .board-table th:nth-child(4),
+        .board-table th:nth-child(5) {
+            width: 12%;
+            min-width: 80px;
+        }
+        .board-table tbody tr {
+            border-bottom: 1px solid #30363d;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .board-table tbody tr:hover {
+            background: rgba(88, 166, 255, 0.05);
+            transform: translateX(2px);
+        }
+        .board-table tbody tr:hover .row-indicator {
+            background: linear-gradient(180deg, #58a6ff 0%, #1f6feb 100%);
+            width: 4px;
+            box-shadow: 0 0 8px rgba(88, 166, 255, 0.5);
+        }
+        .board-table td {
+            padding: 1rem 0.75rem;
+            font-size: 0.9rem;
+            color: #c9d1d9;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .row-indicator {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            background: transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 0 4px 4px 0;
+        }
+        .table-row-wrapper {
+            position: relative;
+        }
+        .content-number {
+            text-align: center;
+            color: #8b949e;
+            font-weight: 500;
+        }
+        .content-title {
+            text-align: left;
+        }
+        .content-title a {
+            color: #c9d1d9;
             text-decoration: none;
+            transition: all 0.2s;
+            display: inline-block;
+            line-height: 1.5;
+            padding: 0.25rem 0;
+        }
+        .content-title a:hover {
+            color: #58a6ff;
+            text-shadow: 0 0 8px rgba(88, 166, 255, 0.3);
+        }
+        .content-author,
+        .content-date,
+        .content-views {
+            text-align: center;
+            color: #8b949e;
+        }
+        .pagination-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+        .pagination {
+            gap: 0.25rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .pagination .page-link {
+            border: 1px solid #30363d;
+            background: #161b22;
+            color: #c9d1d9;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-weight: 500;
+            min-width: 40px;
+            text-align: center;
+        }
+        .pagination .page-link:hover {
+            background: rgba(88, 166, 255, 0.1);
+            border-color: #58a6ff;
+            color: #58a6ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(88, 166, 255, 0.2);
+        }
+        .pagination .page-item.active .page-link {
+            background: linear-gradient(135deg, #1f6feb 0%, #58a6ff 100%);
+            border-color: #58a6ff;
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(88, 166, 255, 0.4);
+        }
+        .pagination .page-item.disabled .page-link {
+            color: #484f58;
+            background: #0d1117;
+            border-color: #21262d;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        .navbar {
+            background: #161b22 !important;
+            border-bottom: 1px solid #30363d !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .navbar-brand {
+            color: #c9d1d9 !important;
             font-weight: 600;
         }
-        .content-title-link:hover {
-            text-decoration: underline;
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #8b949e;
+        }
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+            color: #484f58;
+        }
+        
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .board-container {
+                padding: 1rem;
+                margin-top: 1rem;
+            }
+            .board-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            .board-header-left,
+            .board-header-right {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .board-table th,
+            .board-table td {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.85rem;
+            }
+            .board-table th:first-child {
+                width: 10%;
+                min-width: 50px;
+            }
+            .board-table th:nth-child(3),
+            .board-table th:nth-child(4),
+            .board-table th:nth-child(5) {
+                width: 15%;
+                min-width: 70px;
+            }
+            .pagination .page-link {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.85rem;
+                min-width: 36px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .board-container {
+                padding: 0.75rem;
+            }
+            .board-table {
+                min-width: 500px;
+            }
+            .board-table th,
+            .board-table td {
+                padding: 0.6rem 0.4rem;
+                font-size: 0.8rem;
+            }
+            .pagination {
+                gap: 0.15rem;
+            }
+            .pagination .page-link {
+                padding: 0.35rem 0.5rem;
+                font-size: 0.8rem;
+                min-width: 32px;
+            }
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-secondary">
+    <nav class="navbar navbar-expand-lg navbar-dark border-bottom">
         <div class="container-fluid">
             <a class="navbar-brand" href="/api/contents">
                 <i class="bi bi-journal-text me-2"></i>맑은기술
             </a>
-            <div class="d-flex gap-2" id="navButtons">
-                <button onclick="createContent()" class="btn btn-success btn-sm">
-                    <i class="bi bi-plus-circle me-1"></i>New
-                </button>
+            <div class="d-flex gap-2 align-items-center" id="navButtons">
+                <span id="userGreeting" class="text-light me-2" style="display: none; font-size: 0.9rem;"></span>
                 <a href="/api/auth/login" class="btn btn-outline-primary btn-sm" id="signInBtn" style="display: none;">
-                    <i class="bi bi-box-arrow-in-right me-1"></i>Sign in
+                    <i class="bi bi-box-arrow-in-right me-1"></i>로그인
                 </a>
                 <button onclick="logout()" class="btn btn-outline-danger btn-sm" id="signOutBtn" style="display: none;">
-                    <i class="bi bi-box-arrow-right me-1"></i>Sign out
+                    <i class="bi bi-box-arrow-right me-1"></i>로그아웃
                 </button>
             </div>
         </div>
     </nav>
 
-    <div class="container my-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="text-light">
-                <i class="bi bi-list-ul me-2"></i>Contents
-            </h2>
-        </div>
-        
-        <div id="loading" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+    <div class="container">
+        <div class="board-container">
+            <div class="board-header">
+                <div class="board-header-left">
+                    <div class="board-info" id="boardInfo">Total 0건 1 페이지</div>
+                </div>
+                <div class="board-header-right">
+                    <button onclick="createContent()" class="btn btn-create btn-sm" id="createBtn" style="display: none;">
+                        <i class="bi bi-plus-circle me-1"></i>글쓰기
+                    </button>
+                    <i class="bi bi-search search-icon" onclick="alert('검색 기능은 준비 중입니다.')"></i>
+                </div>
             </div>
+            
+            <div id="loading" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <div id="contentList"></div>
+            </div>
+            
+            <div id="pagination" class="pagination-wrapper"></div>
+            
+            <div id="result" class="alert d-none mt-3" role="alert"></div>
         </div>
-        
-        <div id="contentList"></div>
-        
-        <div id="pagination" class="d-flex justify-content-center mt-4"></div>
-        
-        <div id="result" class="alert d-none mt-3" role="alert"></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -122,13 +387,26 @@
             const userInfo = await getCurrentUser();
             const signInBtn = document.getElementById('signInBtn');
             const signOutBtn = document.getElementById('signOutBtn');
+            const createBtn = document.querySelector('.btn-create');
+            const userGreeting = document.getElementById('userGreeting');
             
             if (userInfo) {
                 signInBtn.style.display = 'none';
                 signOutBtn.style.display = 'inline-block';
+                if (createBtn) createBtn.style.display = 'inline-block';
+                // 사용자 이름 표시
+                if (userGreeting && userInfo.username) {
+                    userGreeting.textContent = `${userInfo.username}님 안녕하세요`;
+                    userGreeting.style.display = 'inline-block';
+                }
             } else {
                 signInBtn.style.display = 'inline-block';
                 signOutBtn.style.display = 'none';
+                if (createBtn) createBtn.style.display = 'none';
+                // 사용자 이름 숨기기
+                if (userGreeting) {
+                    userGreeting.style.display = 'none';
+                }
             }
         }
 
@@ -144,22 +422,7 @@
             window.location.href = '/api/auth/login';
         }
 
-        async function checkAuth() {
-            const userInfo = await getCurrentUser();
-            if (!userInfo) {
-                document.getElementById('result').className = 'alert alert-warning';
-                document.getElementById('result').innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>로그인이 필요합니다. 로그인 페이지로 이동합니다...';
-                document.getElementById('result').classList.remove('d-none');
-                setTimeout(() => {
-                    window.location.href = '/api/auth/login';
-                }, 2000);
-                return false;
-            }
-            return true;
-        }
-
         async function loadContents(page = 0) {
-            if (!(await checkAuth())) return;
             
             currentPage = page;
             const loadingDiv = document.getElementById('loading');
@@ -175,139 +438,150 @@
                     credentials: 'include' // 쿠키(세션) 포함
                 });
 
-                if (response.status === 401) {
-                    window.location.href = '/api/auth/login';
-                    return;
-                }
-
                 const data = await response.json();
+                
+                // 디버깅: API 응답 구조 확인
+                console.log('API Response:', data);
+                console.log('totalElements:', data.totalElements, 'number:', data.number);
                 
                 if (response.ok) {
                     loadingDiv.style.display = 'none';
                     resultDiv.classList.add('d-none');
                     
+                    // 게시판 정보 업데이트
+                    // API 응답 구조 확인: Page 직렬화 모드에 따라 구조가 다를 수 있음
+                    // VIA_DTO 모드에서는 구조가 달라질 수 있으므로 여러 가능성 확인
+                    let totalElements = Number(data.totalElements) || Number(data.page?.totalElements) || 0;
+                    let currentPage = Number(data.number) || Number(data.page?.number) || Number(data.pageable?.pageNumber) || 0;
+                    let totalPages = Number(data.totalPages) || Number(data.page?.totalPages) || 1;
+                    
+                    // totalElements가 0이면 실제 content 길이를 기반으로 추정 (임시 해결책)
+                    if (totalElements === 0 && data.content && data.content.length > 0) {
+                        // 현재 페이지에 표시된 항목 수를 기반으로 추정
+                        // 정확하지 않을 수 있지만 최소한 번호는 제대로 표시됨
+                        totalElements = Math.max(data.content.length, (currentPage + 1) * pageSize);
+                    }
+                    
+                    const currentPageNum = currentPage + 1;
+                    document.getElementById('boardInfo').textContent = `Total ${totalElements}건 ${currentPageNum} 페이지`;
+                    
                     if (data.content && data.content.length > 0) {
                         // 현재 사용자 정보 가져오기 (이미 getCurrentUser에서 설정됨)
                         const isAdmin = currentRole === 'ADMIN';
                         
-                        contentListDiv.innerHTML = data.content.map(content => {
-                            // 작성자 본인이거나 ADMIN인지 확인
-                            const isOwner = currentUsername && currentUsername === content.createdBy;
-                            const canEditDelete = isOwner || isAdmin;
-                            const descriptionPreview = content.description 
-                                ? (content.description.length > 100 
-                                    ? content.description.substring(0, 100) + '...' 
-                                    : content.description)
-                                : '';
-                            
-                            return `
-                            <div class="card content-card mb-3">
-                                <div class="card-body">
-                                    <h5 class="card-title">
-                                        <a href="#" onclick="viewContent(${content.id}); return false;" class="content-title-link">
-                                            ${content.title}
-                                        </a>
-                                    </h5>
-                                    <p class="card-text text-muted small mb-2">
-                                        <i class="bi bi-person me-1"></i>${content.createdBy}
-                                        <span class="mx-2">·</span>
-                                        <i class="bi bi-eye me-1"></i>${content.viewCount} views
-                                        <span class="mx-2">·</span>
-                                        <i class="bi bi-calendar me-1"></i>${new Date(content.createdDate).toLocaleDateString('ko-KR')}
-                                    </p>
-                                    <p class="card-text">${descriptionPreview || '<span class="text-muted">(내용 없음)</span>'}</p>
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <button onclick="viewContent(${content.id})" class="btn btn-outline-primary">
-                                            <i class="bi bi-eye me-1"></i>View
-                                        </button>
-                                        ${canEditDelete ? `
-                                        <button onclick="editContent(${content.id})" class="btn btn-outline-secondary">
-                                            <i class="bi bi-pencil me-1"></i>Edit
-                                        </button>
-                                        <button onclick="deleteContent(${content.id})" class="btn btn-outline-danger">
-                                            <i class="bi bi-trash me-1"></i>Delete
-                                        </button>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            </div>
-                            `;
-                        }).join('');
+                        // 번호 계산 (작성일자 내림차순 기준: 최신 글이 가장 큰 번호)
+                        // 첫 페이지 첫 번째 항목(최신 글)이 totalElements번, 마지막 항목이 (totalElements - pageSize + 1)번
+                        const startNumber = totalElements - (currentPage * pageSize);
+                        console.log('번호 계산:', { totalElements, currentPage, pageSize, startNumber, contentLength: data.content.length, dataKeys: Object.keys(data) });
+                        
+                        contentListDiv.innerHTML = `
+                            <table class="board-table">
+                                <thead>
+                                    <tr>
+                                        <th>번호</th>
+                                        <th>제목</th>
+                                        <th>작성자</th>
+                                        <th>작성일</th>
+                                        <th>조회</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.content.map((content, index) => {
+                                        // 작성자 본인이거나 ADMIN인지 확인
+                                        const isOwner = currentUsername && currentUsername === content.createdBy;
+                                        const canEditDelete = isOwner || isAdmin;
+                                        
+                                        // 날짜 포맷팅 (MM-dd)
+                                        const createdDate = new Date(content.createdDate);
+                                        const formattedDate = `${String(createdDate.getMonth() + 1).padStart(2, '0')}-${String(createdDate.getDate()).padStart(2, '0')}`;
+                                        
+                                        // 번호 (작성일자 내림차순 기준: 최신 글이 가장 큰 번호)
+                                        // 최소값 1 보장
+                                        const contentNumber = Math.max(1, startNumber - index);
+                                        
+                                        return `
+                                        <tr class="table-row-wrapper">
+                                            <td class="content-number">${contentNumber}</td>
+                                            <td class="content-title">
+                                                <a href="#" onclick="viewContent(${content.id}); return false;">
+                                                    ${content.title}
+                                                </a>
+                                            </td>
+                                            <td class="content-author">${content.createdBy}</td>
+                                            <td class="content-date">${formattedDate}</td>
+                                            <td class="content-views">${content.viewCount || 0}</td>
+                                            <div class="row-indicator"></div>
+                                        </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        `;
                         
                         const paginationDiv = document.getElementById('pagination');
                         paginationDiv.innerHTML = '';
                         
-                        if (data.totalPages > 1) {
+                        if (totalPages > 1) {
                             const pagination = document.createElement('nav');
                             const ul = document.createElement('ul');
                             ul.className = 'pagination';
                             
-                            // Previous 버튼
+                            const currentPageForPagination = currentPage;
+                            const totalPagesForPagination = totalPages;
+                            
+                            // « 첫 페이지
+                            const firstLi = document.createElement('li');
+                            firstLi.className = `page-item ${currentPageForPagination === 0 ? 'disabled' : ''}`;
+                            firstLi.innerHTML = `<a class="page-link" href="#" onclick="loadContents(0); return false;">«</a>`;
+                            ul.appendChild(firstLi);
+                            
+                            // ‹ 이전 페이지
                             const prevLi = document.createElement('li');
-                            prevLi.className = `page-item ${data.number === 0 ? 'disabled' : ''}`;
-                            prevLi.innerHTML = `<a class="page-link" href="#" onclick="loadContents(${data.number - 1}); return false;">Previous</a>`;
+                            prevLi.className = `page-item ${currentPageForPagination === 0 ? 'disabled' : ''}`;
+                            prevLi.innerHTML = `<a class="page-link" href="#" onclick="loadContents(${currentPageForPagination - 1}); return false;">‹</a>`;
                             ul.appendChild(prevLi);
                             
-                            // 페이지 번호 버튼들
-                            const currentPage = data.number;
-                            const totalPages = data.totalPages;
-                            let startPage = Math.max(0, currentPage - 2);
-                            let endPage = Math.min(totalPages - 1, currentPage + 2);
+                            // 페이지 번호 버튼들 (최대 5개 표시)
+                            let startPage = Math.max(0, currentPageForPagination - 2);
+                            let endPage = Math.min(totalPagesForPagination - 1, currentPageForPagination + 2);
                             
-                            // 첫 페이지가 보이지 않으면 추가
-                            if (startPage > 0) {
-                                const firstLi = document.createElement('li');
-                                firstLi.className = 'page-item';
-                                firstLi.innerHTML = `<a class="page-link" href="#" onclick="loadContents(0); return false;">1</a>`;
-                                ul.appendChild(firstLi);
-                                
-                                if (startPage > 1) {
-                                    const ellipsisLi = document.createElement('li');
-                                    ellipsisLi.className = 'page-item disabled';
-                                    ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
-                                    ul.appendChild(ellipsisLi);
+                            // 시작 페이지 조정 (항상 5개 보이도록)
+                            if (endPage - startPage < 4) {
+                                if (startPage === 0) {
+                                    endPage = Math.min(totalPagesForPagination - 1, startPage + 4);
+                                } else if (endPage === totalPagesForPagination - 1) {
+                                    startPage = Math.max(0, endPage - 4);
                                 }
                             }
                             
                             // 페이지 번호들
                             for (let i = startPage; i <= endPage; i++) {
                                 const pageLi = document.createElement('li');
-                                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                                pageLi.className = `page-item ${i === currentPageForPagination ? 'active' : ''}`;
                                 pageLi.innerHTML = `<a class="page-link" href="#" onclick="loadContents(${i}); return false;">${i + 1}</a>`;
                                 ul.appendChild(pageLi);
                             }
                             
-                            // 마지막 페이지가 보이지 않으면 추가
-                            if (endPage < totalPages - 1) {
-                                if (endPage < totalPages - 2) {
-                                    const ellipsisLi = document.createElement('li');
-                                    ellipsisLi.className = 'page-item disabled';
-                                    ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
-                                    ul.appendChild(ellipsisLi);
-                                }
-                                
-                                const lastLi = document.createElement('li');
-                                lastLi.className = 'page-item';
-                                lastLi.innerHTML = `<a class="page-link" href="#" onclick="loadContents(${totalPages - 1}); return false;">${totalPages}</a>`;
-                                ul.appendChild(lastLi);
-                            }
-                            
-                            // Next 버튼
+                            // › 다음 페이지
                             const nextLi = document.createElement('li');
-                            nextLi.className = `page-item ${data.number >= data.totalPages - 1 ? 'disabled' : ''}`;
-                            nextLi.innerHTML = `<a class="page-link" href="#" onclick="loadContents(${data.number + 1}); return false;">Next</a>`;
+                            nextLi.className = `page-item ${currentPageForPagination >= totalPagesForPagination - 1 ? 'disabled' : ''}`;
+                            nextLi.innerHTML = `<a class="page-link" href="#" onclick="loadContents(${currentPageForPagination + 1}); return false;">›</a>`;
                             ul.appendChild(nextLi);
+                            
+                            // » 마지막 페이지
+                            const lastLi = document.createElement('li');
+                            lastLi.className = `page-item ${currentPageForPagination >= totalPagesForPagination - 1 ? 'disabled' : ''}`;
+                            lastLi.innerHTML = `<a class="page-link" href="#" onclick="loadContents(${totalPagesForPagination - 1}); return false;">»</a>`;
+                            ul.appendChild(lastLi);
                             
                             pagination.appendChild(ul);
                             paginationDiv.appendChild(pagination);
                         }
                     } else {
                         contentListDiv.innerHTML = `
-                            <div class="card content-card">
-                                <div class="card-body text-center py-5">
-                                    <i class="bi bi-inbox fs-1 text-muted mb-3"></i>
-                                    <p class="text-muted">No contents found.</p>
-                                </div>
+                            <div class="empty-state">
+                                <i class="bi bi-inbox"></i>
+                                <p>등록된 게시글이 없습니다.</p>
                             </div>
                         `;
                     }
@@ -326,6 +600,11 @@
         }
 
         function createContent() {
+            if (!currentUsername) {
+                alert('로그인이 필요합니다.');
+                window.location.href = '/api/auth/login';
+                return;
+            }
             window.location.href = '/api/contents/new';
         }
 

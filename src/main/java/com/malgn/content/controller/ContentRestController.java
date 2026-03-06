@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,7 +25,7 @@ public class ContentRestController {
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Page<ContentsBO>> getAllContents(
-            @PageableDefault(size = 10) Pageable pageable) {
+            @PageableDefault(size = 10, sort = "createdDate", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<ContentsBO> contents = contentsBO.getAllContents(pageable);
         return ResponseEntity.ok(contents);
     }
@@ -39,7 +40,12 @@ public class ContentRestController {
     public ResponseEntity<ContentsBO> createContent(
             @Valid @RequestBody Contents content,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        content.setCreatedBy(userPrincipal.getUsername());
+        // created_by에는 항상 username(사용자명)만 저장
+        User user = userPrincipal.getUser();
+        // User.getUsername()은 UserDetails 인터페이스로 인해 userid를 반환하므로,
+        // 실제 사용자명 필드를 가져오기 위해 getActualUsername() 메서드 사용
+        String createdBy = user.getActualUsername(); // username 필드 값 반환 (null일 수 있음)
+        content.setCreatedBy(createdBy);
         ContentsBO contentBO = contentsBO.createContent(content);
         return ResponseEntity.status(HttpStatus.CREATED).body(contentBO);
     }
