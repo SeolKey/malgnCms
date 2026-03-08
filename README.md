@@ -34,19 +34,22 @@
 
 ### 관리자 로그인
 
-![관리자 로그인](C:\Users\USER\Desktop\관리자 로그인.gif)
+![관리자 로그인](https://github.com/user-attachments/assets/34ef66d6-9ef0-4493-902c-e2fd44a3e7e6)
 
 ### 글작성
 
-![글작성](C:\Users\USER\Desktop\글작성.gif)
+![글작성](https://github.com/user-attachments/assets/56de27d8-80d2-4632-982e-1ab882619301)
+
 
 ### 사용자 로그인
 
-![사용자 로그인 그리고 권한](C:\Users\USER\Desktop\사용자 로그인 그리고 권한.gif)
+![사용자 로그인 그리고 권한](https://github.com/user-attachments/assets/ef466c8a-8e28-4583-8e54-d8546445f537)
+
 
 ### 사용자 글 수정 및 삭제
 
-![사용자 글 수정 및 삭제](C:\Users\USER\Desktop\사용자 글 수정 및 삭제.gif)
+![사용자 글 수정 및 삭제](https://github.com/user-attachments/assets/a76e469c-02fd-476c-88bf-e8cce6563623)
+
 
 
 -----
