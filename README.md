@@ -403,26 +403,26 @@ src/main/resources/
 
 ```mermaid
 graph LR
-    A[Controller] -->|Entity 직접 전달| B[BO<br/>@Service<br/>@Transactional]
-    B -->|Repository 호출| C[Repository<br/>@EntityGraph]
+    A[Controller] -->|Entity 직접 전달| B["BO\n@Service\n@Transactional"]
+    B -->|Repository 호출| C["Repository\n@EntityGraph"]
     C -->|Entity 반환| D[(Database)]
-    B -->|Entity 사용| E[Entity<br/>@Data<br/>편의 메서드]
+    B -->|Entity 사용| E["Entity\n@Data\n편의 메서드"]
     
-    subgraph User[User 엔티티]
-        U1[userId<br/>로그인 ID]
-        U2[username<br/>사용자명]
+    subgraph User["User 엔티티"]
+        U1["userId\n로그인 ID"]
+        U2["username\n사용자명"]
     end
     
-    subgraph Content[Contents 엔티티]
-        C1[createdBy<br/>User 엔티티]
-        C2[lastModifiedBy<br/>User 엔티티]
-        C3[getCreatedBy<br/>username 반환]
-        C4[getLastModifiedBy<br/>username 반환]
+    subgraph Content["Contents 엔티티"]
+        C1["createdBy\nUser 엔티티"]
+        C2["lastModifiedBy\nUser 엔티티"]
+        C3["getCreatedBy\nusername 반환"]
+        C4["getLastModifiedBy\nusername 반환"]
     end
     
     B -.->|getActualUsername| U2
-    B -.->|setCreatedByUser<br/>setLastModifiedByUser| C1
-    B -.->|setCreatedByUser<br/>setLastModifiedByUser| C2
+    B -.->|setCreatedByUser\nsetLastModifiedByUser| C1
+    B -.->|setCreatedByUser\nsetLastModifiedByUser| C2
     E -.->|JSON 직렬화| C3
     E -.->|JSON 직렬화| C4
     
