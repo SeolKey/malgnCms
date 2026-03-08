@@ -181,23 +181,23 @@
 ```mermaid
 graph TB
     Client[클라이언트] --> Controller[Controller]
-    Controller --> BO[BO<\n>@Service]
+    Controller --> BO["BO\n@Service"]
     BO --> Repository[Repository]
     Repository --> DB[(H2 Database)]
-    BO --> Entity[Entity<br/>@Data]
+    BO --> Entity["Entity\n@Data"]
     
     subgraph Controller
-        PageController[@Controller<br/>HTML 페이지]
-        RestController[@RestController<br/>REST API]
+        PageController["@Controller\nHTML 페이지"]
+        RestController["@RestController\nREST API"]
     end
     
-    subgraph User[User 엔티티<br/>UserDetails 구현]
-        UserID[userId<br/>로그인 ID]
-        Username[username<br/>사용자명]
+    subgraph User["User 엔티티\nUserDetails 구현"]
+        UserID["userId\n로그인 ID"]
+        Username["username\n사용자명"]
     end
     
     Controller -.->|인증 정보| User
-    BO -.->|created_by<br/>last_modified_by| Username
+    BO -.->|created_by\nlast_modified_by| Username
     
     style Controller fill:#e1f5ff
     style BO fill:#fff4e1
