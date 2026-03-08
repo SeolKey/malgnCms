@@ -181,7 +181,7 @@
 ```mermaid
 graph TB
     Client[클라이언트] --> Controller[Controller]
-    Controller --> BO[BO<br/>@Service]
+    Controller --> BO[BO<\n>@Service]
     BO --> Repository[Repository]
     Repository --> DB[(H2 Database)]
     BO --> Entity[Entity<br/>@Data]
