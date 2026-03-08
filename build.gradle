@@ -71,3 +71,15 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+// 모든 Java 컴파일 작업에 UTF-8 인코딩 설정
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+// 모든 리소스 처리 작업에 UTF-8 인코딩 설정
+tasks.withType(ProcessResources) {
+    filesMatching('**/*.properties') {
+        filteringCharset = 'UTF-8'
+    }
+}

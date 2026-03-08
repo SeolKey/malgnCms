@@ -327,7 +327,7 @@
         <div class="board-container">
             <div class="board-header">
                 <div class="board-header-left">
-                    <div class="board-info" id="boardInfo">Total 0건 1 페이지</div>
+                    <div class="board-info" id="boardInfo">총 0건 1 페이지</div>
                 </div>
                 <div class="board-header-right">
                     <button onclick="createContent()" class="btn btn-create btn-sm" id="createBtn" style="display: none;">
@@ -339,7 +339,7 @@
             
             <div id="loading" class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
+                    <span class="visually-hidden">로딩 중...</span>
                 </div>
             </div>
             
@@ -360,6 +360,28 @@
         const pageSize = 10;
         let currentUsername = null;
         let currentRole = null;
+        let csrfToken = null;
+        let csrfHeaderName = 'X-CSRF-TOKEN';
+
+        // CSRF 토큰 가져오기
+        async function getCsrfToken() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/csrf-token`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    csrfToken = data.token;
+                    csrfHeaderName = data.headerName || 'X-CSRF-TOKEN';
+                }
+            } catch (error) {
+                console.error('CSRF 토큰 가져오기 실패:', error);
+            }
+        }
+
+        // 페이지 로드 시 CSRF 토큰 가져오기
+        getCsrfToken();
 
         // 세션에서 사용자 정보 가져오기
         async function getCurrentUser() {
@@ -411,9 +433,20 @@
         }
 
         async function logout() {
+            // CSRF 토큰이 없으면 다시 가져오기
+            if (!csrfToken) {
+                await getCsrfToken();
+            }
+
             try {
+                const headers = {};
+                if (csrfToken) {
+                    headers[csrfHeaderName] = csrfToken;
+                }
+
                 await fetch(`${API_BASE_URL}/auth/logout`, {
                     method: 'POST',
+                    headers: headers,
                     credentials: 'include'
                 });
             } catch (error) {

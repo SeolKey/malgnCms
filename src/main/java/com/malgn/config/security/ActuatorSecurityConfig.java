@@ -12,7 +12,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @RequiredArgsConstructor
 @Configuration
-public class ActuatorSecurityConfiguration {
+public class ActuatorSecurityConfig {
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)

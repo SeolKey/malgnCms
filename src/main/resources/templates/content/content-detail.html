@@ -41,7 +41,7 @@
                 <div class="card content-card border-secondary">
                     <div id="loading" class="text-center py-5">
                         <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                            <span class="visually-hidden">로딩 중...</span>
                         </div>
                     </div>
                     
@@ -54,10 +54,10 @@
                                 <small class="text-muted">
                                     <i class="bi bi-person me-1"></i><span id="contentAuthor"></span>
                                     <span class="mx-2">·</span>
-                                    <i class="bi bi-eye me-1"></i><span id="contentViews"></span> views
-                                    <span class="mx-2">·</span>
                                     <i class="bi bi-calendar me-1"></i><span id="contentDate"></span>
                                     <span id="contentModified" class="ms-2"></span>
+                                    <span class="mx-2">·</span>
+                                    <i class="bi bi-eye me-1"></i><span id="contentViews"></span> views
                                 </small>
                             </div>
                             <hr class="border-secondary">
@@ -91,6 +91,28 @@
         let contentData = null;
         let currentUsername = null;
         let currentRole = null;
+        let csrfToken = null;
+        let csrfHeaderName = 'X-CSRF-TOKEN';
+
+        // CSRF 토큰 가져오기
+        async function getCsrfToken() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/csrf-token`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    csrfToken = data.token;
+                    csrfHeaderName = data.headerName || 'X-CSRF-TOKEN';
+                }
+            } catch (error) {
+                console.error('CSRF 토큰 가져오기 실패:', error);
+            }
+        }
+
+        // 페이지 로드 시 CSRF 토큰 가져오기
+        getCsrfToken();
 
         // 세션에서 사용자 정보 가져오기
         async function getCurrentUser() {
@@ -158,33 +180,42 @@
                     contentDetailDiv.style.display = 'block';
                     resultDiv.classList.add('d-none');
                     
-                    // ContentsBO의 구조에 따라 접근 경로 확인
-                    // ContentsBO는 Contents 엔티티를 포함하고 getter 메서드가 있으므로
-                    // 최상위 레벨에 필드가 있을 수 있음
-                    const lastModifiedBy = data.lastModifiedBy || (data.contents && data.contents.lastModifiedBy);
-                    const lastModifiedDate = data.lastModifiedDate || (data.contents && data.contents.lastModifiedDate);
+                    // Contents 엔티티를 직접 사용 (ContentBO 사용)
+                    const lastModifiedBy = data.lastModifiedBy;
+                    const lastModifiedDate = data.lastModifiedDate;
                     
-                    document.getElementById('contentTitle').textContent = data.title || (data.contents && data.contents.title);
-                    document.getElementById('contentAuthor').textContent = data.createdBy || (data.contents && data.contents.createdBy);
-                    document.getElementById('contentViews').textContent = data.viewCount || (data.contents && data.contents.viewCount) || 0;
-                    const createdDate = data.createdDate || (data.contents && data.contents.createdDate);
-                    document.getElementById('contentDate').textContent = new Date(createdDate).toLocaleString('ko-KR');
+                    document.getElementById('contentTitle').textContent = data.title;
+                    document.getElementById('contentAuthor').textContent = data.createdBy;
+                    document.getElementById('contentViews').textContent = data.viewCount || 0;
                     
+                    // 작성일 표시
+                    const createdDate = data.createdDate;
+                    const formattedCreatedDate = new Date(createdDate).toLocaleDateString('ko-KR', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    });
+                    document.getElementById('contentDate').textContent = formattedCreatedDate;
+                    
+                    // 수정일 표시 (수정자가 있을 때만)
                     const modifiedSpan = document.getElementById('contentModified');
-                    // 수정일은 lastModifiedBy가 있을 때만 표시 (실제로 사용자가 수정한 경우만)
-                    // 조회수 증가 등으로 인한 자동 업데이트는 제외
                     console.log('수정일 체크:', { lastModifiedBy, lastModifiedDate });
                     if (lastModifiedBy && lastModifiedDate) {
-                        modifiedSpan.innerHTML = `<span class="mx-2">·</span><i class="bi bi-pencil me-1"></i>Updated ${new Date(lastModifiedDate).toLocaleString('ko-KR')}`;
+                        const formattedModifiedDate = new Date(lastModifiedDate).toLocaleDateString('ko-KR', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit'
+                        });
+                        modifiedSpan.innerHTML = `<span class="mx-2">·</span><i class="bi bi-pencil me-1"></i>수정일: ${formattedModifiedDate} (${lastModifiedBy})`;
                     } else {
                         modifiedSpan.innerHTML = '';
                     }
                     
-                    const description = data.description || (data.contents && data.contents.description);
+                    const description = data.description;
                     document.getElementById('contentDescription').textContent = description || '(내용 없음)';
                     
                     // 작성자 본인이거나 ADMIN인지 확인하여 Edit/Delete 버튼 표시
-                    const createdBy = data.createdBy || (data.contents && data.contents.createdBy);
+                    const createdBy = data.createdBy;
                     const isAdmin = currentRole === 'ADMIN';
                     const isOwner = currentUsername && currentUsername === createdBy;
                     const canEditDelete = isOwner || isAdmin;
@@ -230,9 +261,20 @@
                 return;
             }
 
+            // CSRF 토큰이 없으면 다시 가져오기
+            if (!csrfToken) {
+                await getCsrfToken();
+            }
+
             try {
+                const headers = {};
+                if (csrfToken) {
+                    headers[csrfHeaderName] = csrfToken;
+                }
+
                 const response = await fetch(`${API_BASE_URL}/contents/${contentId}`, {
                     method: 'DELETE',
+                    headers: headers,
                     credentials: 'include'
                 });
 

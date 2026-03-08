@@ -10,8 +10,10 @@
 
 본 프로젝트는 **UserID(로그인 ID)**와 **Username(사용자명)**을 분리하여 관리합니다:
 
-- **UserID (`userid`)**: 로그인 시 사용하는 고유 ID (필수, unique)
-- **Username (`username`)**: 화면에 표시되는 사용자명 (선택사항)
+- **UserID (`userId`)**: 로그인 시 사용하는 고유 ID (필수, unique, not null)
+  - Java 필드명: `userId` (카멜케이스)
+  - 데이터베이스 컬럼명: `userid` (스네이크 케이스)
+- **Username (`username`)**: 화면에 표시되는 사용자명 (필수, unique, not null)
 - 콘텐츠의 `created_by`, `last_modified_by`에는 **Username**만 저장됩니다 (UserID가 아닌 사용자명)
 
 ## 인증 API
@@ -26,15 +28,15 @@ POST /api/auth/signup
 Content-Type: application/json
 
 {
-  "userid": "testuser",
+  "userId": "testuser",
   "username": "테스트사용자",
   "password": "password123"
 }
 ```
 
 **요청 본문**
-- `userid` (필수): 로그인 시 사용할 고유 ID (3-50자, unique)
-- `username` (선택): 화면에 표시될 사용자명 (최대 50자)
+- `userId` (필수): 로그인 시 사용할 고유 ID (3-50자, unique, not null)
+- `username` (필수): 화면에 표시될 사용자명 (최대 50자, unique, not null)
 - `password` (필수): 비밀번호 (6자 이상)
 
 **응답**
@@ -42,7 +44,7 @@ Content-Type: application/json
 ```json
 {
   "id": 1,
-  "userid": "testuser",
+  "userId": "testuser",
   "username": "테스트사용자",
   "role": "USER"
 }
@@ -82,13 +84,13 @@ POST /api/auth/login
 Content-Type: application/json
 
 {
-  "userid": "admin",
+  "userId": "admin",
   "password": "password"
 }
 ```
 
 **요청 본문**
-- `userid` (필수): 로그인 ID
+- `userId` (필수): 로그인 ID
 - `password` (필수): 비밀번호
 
 **응답**
@@ -96,7 +98,7 @@ Content-Type: application/json
 ```json
 {
   "id": 1,
-  "userid": "admin",
+  "userId": "admin",
   "username": "관리자",
   "role": "ADMIN"
 }
@@ -128,15 +130,15 @@ GET /api/auth/me
 - **성공 (200 OK)**
 ```json
 {
-  "userid": "admin",
+  "userId": "admin",
   "username": "관리자",
   "role": "ADMIN"
 }
 ```
 
 > **참고**: 
-> - `userid`: 로그인 시 사용하는 고유 ID
-> - `username`: 화면에 표시되는 사용자명 (없으면 userid와 동일)
+> - `userId`: 로그인 시 사용하는 고유 ID (필수)
+> - `username`: 화면에 표시되는 사용자명 (필수)
 
 - **실패 (401 Unauthorized)** - 인증되지 않은 사용자
 ```json
@@ -155,7 +157,7 @@ GET /api/auth/check-userid/{userid}
 ```
 
 **경로 변수**
-- `userid`: 확인할 UserID
+- `userid`: 확인할 UserID (경로 변수명은 소문자)
 
 **응답**
 - **성공 (200 OK)**

@@ -1,9 +1,8 @@
 package com.malgn.content.controller;
 
-import com.malgn.content.bo.ContentsBO;
+import com.malgn.content.bo.ContentBO;
 import com.malgn.content.entity.Contents;
 import com.malgn.user.entity.User;
-import com.malgn.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,50 +20,44 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ContentRestController {
 
-    private final ContentsBO contentsBO;
+    private final ContentBO contentsBO;
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Page<ContentsBO>> getAllContents(
+    public ResponseEntity<Page<Contents>> getAllContents(
             @PageableDefault(size = 10, sort = "createdDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<ContentsBO> contents = contentsBO.getAllContents(pageable);
+        Page<Contents> contents = contentsBO.getAllContents(pageable);
         return ResponseEntity.ok(contents);
     }
 
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ContentsBO> getContentById(@PathVariable Long id) {
-        ContentsBO content = contentsBO.getContentById(id);
+    public ResponseEntity<Contents> getContentById(@PathVariable Long id) {
+        Contents content = contentsBO.getContentById(id);
         return ResponseEntity.ok(content);
     }
 
     @PostMapping
-    public ResponseEntity<ContentsBO> createContent(
+    public ResponseEntity<Contents> createContent(
             @Valid @RequestBody Contents content,
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        // created_by에는 항상 username(사용자명)만 저장
-        User user = userPrincipal.getUser();
-        // User.getUsername()은 UserDetails 인터페이스로 인해 userid를 반환하므로,
-        // 실제 사용자명 필드를 가져오기 위해 getActualUsername() 메서드 사용
-        String createdBy = user.getActualUsername(); // username 필드 값 반환 (null일 수 있음)
-        content.setCreatedBy(createdBy);
-        ContentsBO contentBO = contentsBO.createContent(content);
-        return ResponseEntity.status(HttpStatus.CREATED).body(contentBO);
+            @AuthenticationPrincipal User user) {
+        // created_by에는 User 엔티티를 직접 설정
+        content.setCreatedByUser(user);
+        Contents savedContent = contentsBO.createContent(content);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedContent);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ContentsBO> updateContent(
+    public ResponseEntity<Contents> updateContent(
             @PathVariable Long id,
             @Valid @RequestBody Contents content,
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        User currentUser = userPrincipal.getUser();
-        ContentsBO contentBO = contentsBO.updateContent(id, content, currentUser);
-        return ResponseEntity.ok(contentBO);
+            @AuthenticationPrincipal User currentUser) {
+        Contents updatedContent = contentsBO.updateContent(id, content, currentUser);
+        return ResponseEntity.ok(updatedContent);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteContent(
             @PathVariable Long id,
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        User currentUser = userPrincipal.getUser();
+            @AuthenticationPrincipal User currentUser) {
         contentsBO.deleteContent(id, currentUser);
         return ResponseEntity.noContent().build();
     }

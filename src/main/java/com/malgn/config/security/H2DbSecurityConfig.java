@@ -14,7 +14,7 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 
 @RequiredArgsConstructor
 @Configuration
-public class H2DbSecurityConfiguration {
+public class H2DbSecurityConfig {
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)

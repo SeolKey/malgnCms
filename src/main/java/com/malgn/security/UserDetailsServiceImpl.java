@@ -16,10 +16,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Override
     @Transactional
-    public UserDetails loadUserByUsername(String userid) throws UsernameNotFoundException {
-        // Spring Security의 loadUserByUsername은 실제로는 userid를 받음
-        User foundUser = userRepository.findByUserid(userid)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userid));
-        return new UserPrincipal(foundUser);
+    public UserDetails loadUserByUsername(String userId) throws UsernameNotFoundException {
+        // Spring Security의 loadUserByUsername은 실제로는 userId를 받음
+        return userRepository.findByUserId(userId)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userId));
     }
 }

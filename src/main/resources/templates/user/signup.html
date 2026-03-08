@@ -43,8 +43,8 @@
                     <div class="card-body p-4">
                         <div class="text-center mb-4">
                             <i class="bi bi-person-plus-fill text-primary fs-1 mb-3"></i>
-                            <h2 class="card-title mb-0">Create your account</h2>
-                            <p class="text-muted mt-2">Join us today</p>
+                            <h2 class="card-title mb-0">계정 만들기</h2>
+                            <p class="text-muted mt-2">지금 가입하세요</p>
                         </div>
                         
                         <form id="signupForm">
@@ -57,20 +57,20 @@
                                     <input type="text" class="form-control bg-dark border-secondary text-light" 
                                            id="userid" placeholder="아이디 (3-50자)" required minlength="3" maxlength="50">
                                     <button type="button" class="btn btn-primary" id="checkUseridBtn" onclick="checkUserid()">
-                                        <i class="bi bi-check-circle me-1"></i>Check
+                                        <i class="bi bi-check-circle me-1"></i>확인
                                     </button>
                                 </div>
                                 <div id="useridMessage" class="validation-feedback"></div>
                             </div>
                             
                             <div class="mb-3">
-                                <label for="username" class="form-label">Username</label>
+                                <label for="username" class="form-label">사용자명 <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-dark border-secondary">
                                         <i class="bi bi-person"></i>
                                     </span>
                                     <input type="text" class="form-control bg-dark border-secondary text-light" 
-                                           id="username" placeholder="사용자명 (선택사항)" maxlength="50">
+                                           id="username" placeholder="사용자명을 입력하세요" maxlength="50" required>
                                 </div>
                                 <div id="usernameMessage" class="validation-feedback"></div>
                             </div>
@@ -100,7 +100,7 @@
                             </div>
                             
                             <button type="submit" class="btn btn-success w-100 mb-3" id="submitBtn">
-                                <i class="bi bi-person-check me-2"></i>Create account
+                                <i class="bi bi-person-check me-2"></i>계정 만들기
                             </button>
                         </form>
                         
@@ -110,11 +110,11 @@
                         
                         <div class="text-center">
                             <a href="/api/auth/login" class="text-decoration-none me-3">
-                                <i class="bi bi-box-arrow-in-right me-1"></i>Sign in
+                                <i class="bi bi-box-arrow-in-right me-1"></i>로그인
                             </a>
                             <span class="text-muted">·</span>
                             <a href="/api/contents" class="text-decoration-none ms-3">
-                                <i class="bi bi-list-ul me-1"></i>Contents
+                                <i class="bi bi-list-ul me-1"></i>게시판
                             </a>
                         </div>
                     </div>
@@ -128,6 +128,28 @@
         const API_BASE_URL = 'http://localhost:8080/api';
         let useridChecked = false;
         let useridAvailable = false;
+        let csrfToken = null;
+        let csrfHeaderName = 'X-CSRF-TOKEN';
+
+        // CSRF 토큰 가져오기
+        async function getCsrfToken() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/csrf-token`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    csrfToken = data.token;
+                    csrfHeaderName = data.headerName || 'X-CSRF-TOKEN';
+                }
+            } catch (error) {
+                console.error('CSRF 토큰 가져오기 실패:', error);
+            }
+        }
+
+        // 페이지 로드 시 CSRF 토큰 가져오기
+        getCsrfToken();
 
         const useridInput = document.getElementById('userid');
         const usernameInput = document.getElementById('username');
@@ -153,7 +175,7 @@
             }
 
             checkUseridBtn.disabled = true;
-            checkUseridBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Checking...';
+            checkUseridBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>확인 중...';
 
             try {
                 const response = await fetch(`${API_BASE_URL}/auth/check-userid/${encodeURIComponent(userid)}`);
@@ -181,7 +203,7 @@
                 useridChecked = false;
             } finally {
                 checkUseridBtn.disabled = false;
-                checkUseridBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Check';
+                checkUseridBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>확인';
             }
         }
 
@@ -190,6 +212,24 @@
             useridAvailable = false;
             useridInput.classList.remove('is-valid', 'is-invalid');
             useridMessage.textContent = '';
+        });
+
+        usernameInput.addEventListener('input', function() {
+            const username = usernameInput.value.trim();
+            if (username.length === 0) {
+                usernameInput.classList.remove('is-valid', 'is-invalid');
+                usernameMessage.textContent = '';
+            } else if (username.length > 50) {
+                usernameInput.classList.add('is-invalid');
+                usernameInput.classList.remove('is-valid');
+                usernameMessage.className = 'validation-feedback text-danger';
+                usernameMessage.innerHTML = '<i class="bi bi-x-circle me-1"></i>사용자명은 50자 이하여야 합니다.';
+            } else {
+                usernameInput.classList.add('is-valid');
+                usernameInput.classList.remove('is-invalid');
+                usernameMessage.className = 'validation-feedback text-success';
+                usernameMessage.innerHTML = '<i class="bi bi-check-circle me-1"></i>사용 가능한 사용자명입니다.';
+            }
         });
 
         function validatePassword() {
@@ -255,6 +295,18 @@
                 return;
             }
 
+            // 사용자명 필수 확인
+            if (!username || username.trim().length === 0) {
+                usernameInput.classList.add('is-invalid');
+                usernameInput.classList.remove('is-valid');
+                usernameMessage.className = 'validation-feedback text-danger';
+                usernameMessage.innerHTML = '<i class="bi bi-x-circle me-1"></i>사용자명을 입력해주세요.';
+                resultDiv.className = 'alert alert-warning';
+                resultDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>사용자명을 입력해주세요.';
+                resultDiv.classList.remove('d-none');
+                return;
+            }
+
             if (!validatePassword()) {
                 resultDiv.className = 'alert alert-warning';
                 resultDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>비밀번호를 확인해주세요.';
@@ -271,7 +323,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ userid, username: username || null, password })
+                    body: JSON.stringify({ userId: userid, username: username.trim(), password })
                 });
 
                 const data = await response.json();
@@ -288,14 +340,14 @@
                     resultDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>회원가입 실패: ' + (data.message || JSON.stringify(data));
                     resultDiv.classList.remove('d-none');
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="bi bi-person-check me-2"></i>Create account';
+                    submitBtn.innerHTML = '<i class="bi bi-person-check me-2"></i>계정 만들기';
                 }
             } catch (error) {
                 resultDiv.className = 'alert alert-danger';
                 resultDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>오류 발생: ' + error.message;
                 resultDiv.classList.remove('d-none');
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-person-check me-2"></i>Create account';
+                submitBtn.innerHTML = '<i class="bi bi-person-check me-2"></i>계정 만들기';
             }
         });
     </script>

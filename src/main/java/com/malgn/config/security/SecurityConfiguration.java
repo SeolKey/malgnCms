@@ -23,8 +23,16 @@ public class SecurityConfiguration {
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/h2-console/**")
-                .ignoringRequestMatchers("/api/**")
+                .ignoringRequestMatchers("/h2-console/**") // H2 콘솔만 CSRF 비활성화
+                // API는 CSRF 보호 활성화 (세션 기반 인증이므로 CSRF 보호 필요)
+            )
+            .cors(AbstractHttpConfigurer::disable)
+            .csrf(csrf -> csrf
+                .ignoringRequestMatchers("/h2-console/**") // H2 콘솔만 CSRF 비활성화
+                // CSRF 토큰을 쿠키에 저장 (JavaScript에서 접근 가능하도록)
+                .csrfTokenRepository(
+                    org.springframework.security.web.csrf.CookieCsrfTokenRepository.withHttpOnlyFalse()
+                )
             )
             .cors(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
